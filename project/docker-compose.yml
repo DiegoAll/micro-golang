@@ -1,0 +1,49 @@
+version: '3'
+
+services:
+
+  broker-service:
+    user: ${CURRENT_UID}
+    build:
+      # command: bash -c "rm -f tmp/pids/server.pid && bundle exec rails s -p 3000 -b '0.0.0.0'"
+      #Context: Directorio que se utiliza como origen para construir la imagen del contenedor.
+      context: ./../broker-service
+      dockerfile: ./../broker-service/broker-service.dockerfile
+    restart: always
+    ports:
+      - "8080:80"
+    deploy:
+      mode: replicated
+      replicas: 1
+
+  authentication-service:
+    build:
+      context: ./../authentication-service
+      dockerfile: ./../authentication-service/authentication-service.dockerfile
+    restart: always
+    ports:
+      - "8081:80"
+    deploy:
+      mode: replicated
+      replicas: 1
+    environment:
+      DSN: "host=postgres port=5432 user=postgres password=password dbname=users sslmode=disable timezone=UTC connect_timeout=5"
+
+  postgres:
+  #Recordar que se puede colocar el containername
+    user: ${CURRENT_UID}
+    image: 'postgres:14.2'
+    #command: bash -c "rm -f tmp/pids/server.pid && bundle exec rails s -p 3000 -b '0.0.0.0'"
+    ports:
+      - "54322:5432"
+    deploy:
+      mode: replicated
+      replicas: 1
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: users
+      #CURRENT_UID: (id -u):$(id -g)
+      #CURRENT_UID: 164865804:1010544492
+    volumes:
+      - ./db-data/postgres/:/var/lib/postgresql/data/
